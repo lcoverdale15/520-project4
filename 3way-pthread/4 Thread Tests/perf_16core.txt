@@ -1,0 +1,20 @@
+# started on Wed Apr 16 15:40:42 2025
+
+
+ Performance counter stats for './pthread.o':
+
+          5,752.40 msec task-clock:u                     #    2.581 CPUs utilized             
+                 0      context-switches:u               #    0.000 /sec                      
+                 0      cpu-migrations:u                 #    0.000 /sec                      
+           421,883      page-faults:u                    #   73.340 K/sec                     
+    12,423,068,097      cycles:u                         #    2.160 GHz                       
+    19,634,978,647      instructions:u                   #    1.58  insn per cycle            
+     3,884,317,619      branches:u                       #  675.252 M/sec                     
+         8,452,527      branch-misses:u                  #    0.22% of all branches           
+
+       2.228862641 seconds time elapsed
+
+       4.555448000 seconds user
+       1.174145000 seconds sys
+
+
