@@ -1,7 +1,11 @@
 #!/bin/bash
-#SBATCH --constraint=moles
-#SBATCH --nodes=2
-#SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=1G
-gcc pthread.c -o pthread.o
-perf stat -o perf_16core.txt ./pthread.o
+#SBATCH --job-name=pthreads_test
+#SBATCH --output=result_%j.txt
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --constraint=mole
+#SBATCH --time=00:10:00
+#SBATCH --mem=4G
+
+# Change this to your actual path
+./pthread.c 4

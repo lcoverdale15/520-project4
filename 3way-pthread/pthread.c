@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_THREADS 4
 #define MAX_LINES 1000000 // just for initial allocation
 
 char **lines;
 int *max_values;
 int total_lines = 0;
+int NUM_THREADS = atoi(argv[1]);
 
 void *process_lines(void *arg)
 {
@@ -84,7 +84,6 @@ int main()
         pthread_join(threads[t], NULL);
     }
 
-    // Print the results in the correct order
     for (int i = 0; i < total_lines; i++)
     {
         printf("%d: %d\n", i, max_values[i]);
