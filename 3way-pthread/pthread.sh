@@ -1,11 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=pthreads_test
-#SBATCH --output=result_%j.txt
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --constraint=mole
-#SBATCH --time=00:10:00
-#SBATCH --mem=4G
+#SBATCH --constraint=moles
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=2G  # Increase memory per CPU to 2 because 1 is not enough
+#SBATCH --time=01:00:00  # Set a time limit just incase something breaks
 
-# Change this to your actual path
-./pthread.c 4
+gcc pthread.c -o pthread.o -lpthread
+perf stat -o perf_${SLURM_CPUS_PER_TASK}core.txt ./pthread.o $SLURM_CPUS_PER_TASK
+

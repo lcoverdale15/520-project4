@@ -8,7 +8,7 @@
 char **lines;
 int *max_values;
 int total_lines = 0;
-int NUM_THREADS = atoi(argv[1]);
+int NUM_THREADS;
 
 void *process_lines(void *arg)
 {
@@ -32,8 +32,15 @@ void *process_lines(void *arg)
     pthread_exit(NULL);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 2)
+    {
+        fprintf(stderr, "Usage: %s <num_threads>\n", argv[0]);
+        exit(1);
+    }
+    NUM_THREADS = atoi(argv[1]);
+
     FILE *fp = fopen("/homes/dan/625/wiki_dump.txt", "r");
     if (!fp)
     {
