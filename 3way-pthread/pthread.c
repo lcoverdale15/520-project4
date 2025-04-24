@@ -3,112 +3,97 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STRING_SIZE 16
-#define ALPHABET_SIZE 26
 #define NUM_THREADS 4
+#define MAX_LINES 1000000 // just for initial allocation
 
-pthread_mutex_t mutexsum;
-char **char_array = NULL;
-int char_counts[ALPHABET_SIZE];
-long total_lines = 0;
+char **lines;
+int *max_values;
+int total_lines = 0;
 
-void read_file(const char *filename) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
+void *process_lines(void *arg)
+{
+    long tid = (long)arg;
+    int start = tid * (total_lines / NUM_THREADS);
+    int end = (tid == NUM_THREADS - 1) ? total_lines : start + (total_lines / NUM_THREADS);
+
+    for (int i = start; i < end; i++)
+    {
+        int max = 0;
+        for (char *p = lines[i]; *p != '\0'; p++)
+        {
+            if ((unsigned char)*p > max)
+            {
+                max = (unsigned char)*p;
+            }
+        }
+        max_values[i] = max;
     }
 
-    long capacity = 100000;  // Start with 100k lines, grow if needed
-    char_array = malloc(capacity * sizeof(char *));
-    if (!char_array) {
-        perror("Memory allocation failed");
-        exit(EXIT_FAILURE);
+    pthread_exit(NULL);
+}
+
+int main()
+{
+    FILE *fp = fopen("/homes/dan/625/wiki_dump.txt", "r");
+    if (!fp)
+    {
+        perror("Failed to open file");
+        exit(1);
     }
 
-    char buffer[STRING_SIZE + 2]; // +2 for newline and null terminator
-    while (fgets(buffer, sizeof(buffer), fp)) {
-        size_t len = strlen(buffer);
-        if (len > 0 && buffer[len - 1] == '\n') buffer[len - 1] = '\0';
+    size_t capacity = MAX_LINES;
+    lines = malloc(capacity * sizeof(char *));
+    max_values = malloc(capacity * sizeof(int));
+    if (!lines || !max_values)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
 
-        if (total_lines >= capacity) {
+    char *line = NULL;
+    size_t len = 0;
+
+    while (getline(&line, &len, fp) != -1)
+    {
+        if (total_lines >= capacity)
+        {
             capacity *= 2;
-            char_array = realloc(char_array, capacity * sizeof(char *));
-            if (!char_array) {
-                perror("Realloc failed");
-                exit(EXIT_FAILURE);
+            lines = realloc(lines, capacity * sizeof(char *));
+            max_values = realloc(max_values, capacity * sizeof(int));
+            if (!lines || !max_values)
+            {
+                fprintf(stderr, "Reallocation failed\n");
+                exit(1);
             }
         }
-
-        char_array[total_lines] = malloc(STRING_SIZE);
-        strncpy(char_array[total_lines], buffer, STRING_SIZE);
-        total_lines++;
+        lines[total_lines++] = strdup(line);
     }
 
+    free(line);
     fclose(fp);
-}
 
-void *count_array(void *arg) {
-    long thread_id = (long)arg;
-    long start = thread_id * (total_lines / NUM_THREADS);
-    long end = (thread_id == NUM_THREADS - 1) ? total_lines : start + (total_lines / NUM_THREADS);
-
-    int local_counts[ALPHABET_SIZE] = {0};
-
-    for (long i = start; i < end; i++) {
-        for (int j = 0; j < STRING_SIZE && char_array[i][j]; j++) {
-            char c = char_array[i][j];
-            if (c >= 'a' && c <= 'z') {
-                local_counts[c - 'a']++;
-            }
-        }
-    }
-
-    pthread_mutex_lock(&mutexsum);
-    for (int i = 0; i < ALPHABET_SIZE; i++) {
-        char_counts[i] += local_counts[i];
-    }
-    pthread_mutex_unlock(&mutexsum);
-
-    pthread_exit(NULL);
-}
-
-void print_results() {
-    int total = 0;
-    for (int i = 0; i < ALPHABET_SIZE; i++) {
-        total += char_counts[i];
-        printf(" %c %d\n", (char)(i + 'a'), char_counts[i]);
-    }
-    printf("\nTotal characters: %d\n", total);
-}
-
-int main() {
     pthread_t threads[NUM_THREADS];
-    pthread_attr_t attr;
 
-    pthread_mutex_init(&mutexsum, NULL);
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-    read_file("/homes/dan/625/wiki_dump.txt");
-
-    for (long i = 0; i < NUM_THREADS; i++) {
-        pthread_create(&threads[i], &attr, count_array, (void *)i);
+    for (long t = 0; t < NUM_THREADS; t++)
+    {
+        pthread_create(&threads[t], NULL, process_lines, (void *)t);
     }
 
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
+    for (int t = 0; t < NUM_THREADS; t++)
+    {
+        pthread_join(threads[t], NULL);
     }
 
-    print_results();
-
-    // Cleanup
-    for (long i = 0; i < total_lines; i++) {
-        free(char_array[i]);
+    // Print the results in the correct order
+    for (int i = 0; i < total_lines; i++)
+    {
+        printf("%d: %d\n", i, max_values[i]);
+        free(lines[i]);
     }
-    free(char_array);
 
-    pthread_attr_destroy(&attr);
-    pthread_mutex_destroy(&mutexsum);
-    pthread_exit(NULL);
+    free(lines);
+    free(max_values);
+
+    printf("Program completed.\n");
+    return 0;
 }

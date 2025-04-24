@@ -1,0 +1,2 @@
+./pthread.o: Killed
+slurmstepd: error: Detected 1 oom_kill event in StepId=21349719.batch. Some of the step tasks have been OOM Killed.
