@@ -1,0 +1,16 @@
+# started on Fri Apr 25 09:37:50 2025
+
+
+ Performance counter stats for 'mpirun -np 4 ./MPI.o' (10 runs):
+
+          3,817.74 msec task-clock:u                     #    1.771 CPUs utilized               ( +-  0.10% )
+                 0      context-switches:u               #    0.000 /sec                      
+                 0      cpu-migrations:u                 #    0.000 /sec                      
+            61,461      page-faults:u                    #   16.099 K/sec                       ( +-  0.43% )
+     4,882,383,682      cycles:u                         #    1.279 GHz                         ( +-  0.06% )
+    11,532,638,620      instructions:u                   #    2.36  insn per cycle              ( +-  0.20% )
+     2,369,284,318      branches:u                       #  620.598 M/sec                       ( +-  0.20% )
+        11,287,914      branch-misses:u                  #    0.48% of all branches             ( +-  0.23% )
+
+           2.15626 +- 0.00121 seconds time elapsed  ( +-  0.06% )
+
