@@ -34,9 +34,8 @@ int main()
         exit(1);
     }
 
-    size_t capacity = MAX_LINES; //setting the capacity of our arrays
-    lines = malloc(capacity * sizeof(char *)); //Allocating memory for lines
-    max_values = malloc(capacity * sizeof(int)); //allocate memory for our max numbers
+    lines = malloc(MAX_LINES * sizeof(char *)); //Allocating memory for lines
+    max_values = malloc(MAX_LINES * sizeof(int)); //allocate memory for our max numbers
     if (!lines || !max_values) //Check memory allocated correctly
     {
         fprintf(stderr, "Memory allocation failed\n");
@@ -48,17 +47,7 @@ int main()
 
     while (getline(&line, &len, fp) != -1)
     {
-        if (total_lines >= capacity) //reallocate memory if necessary
-        {
-            capacity *= 2;
-            lines = realloc(lines, capacity * sizeof(char *));
-            max_values = realloc(max_values, capacity * sizeof(int));
-            if (!lines || !max_values)
-            {
-                fprintf(stderr, "Reallocation failed\n");
-                exit(1);
-            }
-        }
+        if (total_lines >= MAX_LINES) break; //Out of space
         lines[total_lines++] = strdup(line); //allocating and copying buffer
     }
 
