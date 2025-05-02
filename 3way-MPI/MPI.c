@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LINE_LENGTH 2048
 #define MAX_LINES 100000
-#define FILE_PATH "/homes/dan/625/wiki_dump.txt"
+
+char **lines;
+int *max_values;
+int total_lines = 0;
 
 //Function for finding our max character in the line
 int find_max_char(const char *line){
@@ -26,29 +28,30 @@ int main(int argc, char *argv[]){
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank); //Determines the rank of the calling process in the communicator: https://www.mpich.org/static/docs/v3.3/www3/MPI_Comm_rank.html
 	MPI_Comm_size(MPI_COMM_WORLD, &size); //Size of the group associated with the communicator: https://www.mpich.org/static/docs/latest/www3/MPI_Comm_size.html
 	
-	char **lines = NULL; 
-	int *max_values = NULL;
-	int total_lines = 0;
-	
 	if(rank == 0){ //Checking if the rank of our process is 0
-		FILE *fp = fopen(FILE_PATH, "r"); //open the file
+		FILE *fp = fopen("/homes/dan/625/wiki_dump.txt", "r"); //open the file
 		if(!fp){ //check for errors opening the file
 			perror("Failed to open file");
 			MPI_Abort(MPI_COMM_WORLD, 1); //Terminates all processes in our MPI environment
 		}
 		
 		lines = malloc(MAX_LINES * sizeof(char *)); //Allocate memory for lines
-		char buffer[MAX_LINE_LENGTH]; //create a buffer for one line of text
-		
-		while (fgets(buffer, sizeof(buffer), fp)){ //Read a line into the buffer
-			if(total_lines >= MAX_LINES) break; //If we have read the maximum amount of lines, stop reading
-			lines[total_lines] = strdup(buffer); //Allocate memory and copy string from buffer into lines at index total_lines
-			if(!lines[total_lines]){ //Check if strdup failed
-				MPI_Abort(MPI_COMM_WORLD, 1); //Terminates all processes in our MPI environment
-			}
-			total_lines++;
+		max_values = malloc(MAX_LINES * sizeof(int)); //allocate memory for our max numbers
+		if(!lines || !max_values)
+		{
+			fprintf(stderr, "Memory allocation failed\n");
+			MPI_Abort(MPI_COMM_WORLD, 1); //Terminates all processes in our MPI environment
 		}
 		
+		char *line = NULL; //create a buffer for one line of text
+		size_t len = 0;
+		
+		while (getline(&line, &len, fp) != -1){ //Read a line into the buffer
+			if(total_lines >= MAX_LINES) break; //If we have read the maximum amount of lines, stop reading
+			lines[total_lines++] = strdup(line); //Allocate memory and copy string from buffer into lines at index total_lines
+		}
+		
+		free(line);
 		fclose(fp);
 	}
 	
@@ -61,12 +64,12 @@ int main(int argc, char *argv[]){
 	char *flat_lines = NULL; //Big block of lines flattened into one char array
 	int *sendcounts = NULL; //How many bytes each process should get
 	int *displs = NULL; //Where each process's chunk starts inside of flat_lines
-	int total_bytes = total_lines * MAX_LINE_LENGTH; //Total number of bytes as long as each line takes up MAX_LINE_LENGTH bytes
+	int total_bytes = total_lines * len; //Total number of bytes as long as each line takes up MAX_LINE_LENGTH bytes
 	
 	if(rank == 0){ //For our initial rank
 		flat_lines = malloc(total_bytes); //initialize flat_lines
 		for(int i = 0; i < total_lines; i++){ 
-			snprintf(flat_lines + i * MAX_LINE_LENGTH, MAX_LINE_LENGTH, "%s", lines[i]); //Copy each line into flat_lines, giving each line MAX_LINE_LENGTH even if text is shorter
+			snprintf(flat_lines + i * len, len, "%s", lines[i]); //Copy each line into flat_lines, giving each line MAX_LINE_LENGTH even if text is shorter
 		}
 		
 		sendcounts = malloc(size * sizeof(int)); //Initialize sendcounts
@@ -75,18 +78,18 @@ int main(int argc, char *argv[]){
 		int offset = 0;
 		for(int i = 0; i < size; i++){
 			int count = base_lines + (i < remainder ? 1 : 0); //Calculate how many lines process gets
-			sendcounts[i] = count * MAX_LINE_LENGTH; //Multiply to get bytes
+			sendcounts[i] = count * len; //Multiply to get bytes
 			displs[i] = offset; //set to where data starts in flat_lines for our process
 			offset += sendcounts[i]; //update offset for the next process (i)
 		}
 	}
 	
-	char *local_flat = malloc(local_count * MAX_LINE_LENGTH); //allocate memory for the process itself to hold a part of flat_lines
+	char *local_flat = malloc(local_count * len); //allocate memory for the process itself to hold a part of flat_lines
     MPI_Scatterv(flat_lines, sendcounts, displs, MPI_CHAR, local_flat, local_count * MAX_LINE_LENGTH, MPI_CHAR, 0, MPI_COMM_WORLD); //Scatter data from flat_lines into local_flat: https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/node72.html
 	//Every process now should have its own chunk of lines
     char **local_lines = malloc(local_count * sizeof(char *)); //turn local_flat into an array of pointers
     for (int i = 0; i < local_count; i++) {
-        local_lines[i] = &local_flat[i * MAX_LINE_LENGTH];
+        local_lines[i] = &local_flat[i * len];
     }
 
     int *local_max = malloc(local_count * sizeof(int)); //Find the local max for each line
@@ -98,7 +101,6 @@ int main(int argc, char *argv[]){
     int *recvcounts = NULL; //Tells how many results are coming back
     int *displs_gather = NULL; //Tells where to place the process's results in max_values
     if(rank == 0){
-        max_values = malloc(total_lines * sizeof(int));
         recvcounts = malloc(size * sizeof(int));
         displs_gather = malloc(size * sizeof(int));
         for(int i = 0; i < size; i++){
