@@ -1,36 +1,15 @@
-#
-# Open Systems Lab
-# http://www.lam-mpi.org/tutorials/
-# Indiana University
-#
-# MPI Tutorial
-# Sample Makefile
-#
+.PHONY: all 3way-MPI 3way-OpenMP 3way-pthread
 
-# "mpicc" adds the directories for the include and lib files.  Hence,
-# -I and -L for MPI stuff is not necessary
-#
+# Default CPU count
+CPUS ?= 4
 
-CC        = mpicc
+all: 3way-MPI 3way-OpenMP 3way-pthread
 
-#
-# Modify TOPDIR if you use your own include files and library files
-#
+3way-MPI:
+	$(MAKE) -C 3way-MPI CPUS=$(CPUS)
 
-PROGRAM   = hello			# name of the binary
-SRCS      = MPI_C_SAMPLE.c		# source file
-OBJS      = $(SRCS:.c=.o)		# object file
+3way-OpenMP:
+	$(MAKE) -C 3way-OpenMP CPUS=$(CPUS)
 
-#
-# Targets
-#
-
-default: all
-
-all: $(PROGRAM) 
-
-$(PROGRAM): $(OBJS)
-	$(CC) $(OBJS) -o $(PROGRAM) $(LDFLAGS)
-
-clean:
-	/bin/rm -f $(OBJS) $(PROGRAM)
+3way-pthread:
+	$(MAKE) -C 3way-pthread CPUS=$(CPUS)
