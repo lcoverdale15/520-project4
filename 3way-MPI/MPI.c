@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define MAX_LINES 100000
-#define MAX_LINE_LENGTH 1028
+#define MAX_LINE_LENGTH 2048
 
 char **lines;
 int *max_values;
